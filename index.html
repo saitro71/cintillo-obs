@@ -40,32 +40,39 @@
 </div>
 
 <script>
-    // Apuntamos directamente al Feed RSS de Imagen Zacatecas convertido a JSON
-    const rssApiUrl = 'https://api.rss2json.com/v1/api.json?rss_url=https://imagenzac.com.mx/feed/';
+    // Le pedimos a Google News que busque solo en el sitio de Imagen Zacatecas
+    const googleNewsRss = 'https://news.google.com/rss/search?q=site:imagenzac.com.mx&hl=es-419&gl=MX&ceid=MX:es-419';
+    // Pasamos ese RSS infalible por nuestro conversor
+    const rssApiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleNewsRss)}`;
 
     function cargarNoticias() {
         fetch(rssApiUrl)
             .then(response => {
-                if (!response.ok) throw new Error('Error en el servidor de RSS');
+                if (!response.ok) throw new Error('Error de conexión con Google News');
                 return response.json();
             })
             .then(data => {
                 if (data.status === 'ok' && data.items.length > 0) {
-                    // Extraemos solo los títulos de las noticias
-                    let titulos = data.items.map(item => item.title);
+                    let titulos = [];
+                    data.items.forEach(item => {
+                        // Limpiamos el texto porque Google a veces le agrega " - Imagen Zacatecas" al final del título
+                        let tituloLimpio = item.title.replace(' - Imagen Zacatecas', '').trim();
+                        titulos.push(tituloLimpio);
+                    });
                     
                     const separador = " &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ";
                     document.getElementById('noticias').innerHTML = titulos.join(separador) + separador;
                 } else {
-                    document.getElementById('noticias').innerHTML = "No se encontraron noticias en el Feed en este momento.";
+                    document.getElementById('noticias').innerHTML = "Esperando titulares recientes...";
                 }
             })
             .catch(error => {
-                document.getElementById('noticias').innerHTML = "Fallo de actualización: " + error.message;
+                document.getElementById('noticias').innerHTML = "Reconectando sistema de noticias... ";
+                console.error(error);
             });
     }
 
-    // Cargar al inicio y actualizar cada 5 minutos
+    // Carga inicial y actualización automática cada 5 minutos
     cargarNoticias();
     setInterval(cargarNoticias, 300000);
 </script>
