@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cintillo de Noticias</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent; /* Fondo transparente para OBS */
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 28px;
+            font-weight: bold;
+            overflow: hidden;
+        }
+        .ticker-wrap {
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Fondo negro semitransparente */
+            padding: 10px 0;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+        .ticker {
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%;
+            animation: ticker 30s linear infinite;
+        }
+        @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="ticker-wrap">
+    <div class="ticker" id="noticias">Actualizando noticias...</div>
+</div>
+
+<script>
+    const urlNoticias = 'https://imagenzac.com.mx/ultima-hora';
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlNoticias)}`;
+
+    function cargarNoticias() {
+        fetch(proxyUrl)
+            .then(response => {
+                if (response.ok) return response.json();
+                throw new Error('Error en la red');
+            })
+            .then(data => {
+                // Convertimos el texto HTML en un documento navegable
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.contents, 'text/html');
+                
+                // Usamos tu selector exacto
+                const elementos = doc.querySelectorAll('h2.ee-post__title__heading');
+                
+                let titulos = [];
+                elementos.forEach(el => {
+                    if(el.textContent.trim() !== '') {
+                        titulos.push(el.textContent.trim());
+                    }
+                });
+
+                if (titulos.length > 0) {
+                    const separador = " &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; ";
+                    document.getElementById('noticias').innerHTML = titulos.join(separador) + separador;
+                }
+            })
+            .catch(error => console.error('Error al cargar noticias:', error));
+    }
+
+    // Cargar al inicio y actualizar cada 5 minutos (300000 ms)
+    cargarNoticias();
+    setInterval(cargarNoticias, 300000);
+</script>
+
+</body>
+</html>
