@@ -7,7 +7,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: transparent;
+            background-color: transparent; /* Fondo transparente para OBS */
             color: white;
             font-family: Arial, sans-serif;
             font-size: 28px;
@@ -19,60 +19,73 @@
             background-color: rgba(0, 0, 0, 0.7);
             padding: 10px 0;
             box-sizing: border-box;
+            display: flex;
             white-space: nowrap;
+            overflow: hidden;
         }
         .ticker {
-            display: inline-block;
-            white-space: nowrap;
-            padding-left: 100%;
-            animation: ticker 30s linear infinite;
+            flex-shrink: 0;
+            padding-right: 50px; /* Espacio antes de que empiece la repetición */
+            animation: ticker 100s linear infinite;
         }
         @keyframes ticker {
-            0% { transform: translate3d(0, 0, 0); }
-            100% { transform: translate3d(-100%, 0, 0); }
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
         }
     </style>
 </head>
 <body>
 
 <div class="ticker-wrap">
-    <div class="ticker" id="noticias">Conectando con el servidor de noticias...</div>
+    <div class="ticker" id="noticias">Cargando noticias de Última Hora...</div>
+    <div class="ticker" id="noticias2">Cargando noticias de Última Hora...</div>
 </div>
 
 <script>
-    // Le pedimos a Google News que busque solo en el sitio de Imagen Zacatecas
-    const googleNewsRss = 'https://news.google.com/rss/search?q=site:imagenzac.com.mx&hl=es-419&gl=MX&ceid=MX:es-419';
-    // Pasamos ese RSS infalible por nuestro conversor
-    const rssApiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleNewsRss)}`;
+    const urlNoticias = 'https://imagenzac.com.mx/ultima-hora';
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(urlNoticias)}`;
 
     function cargarNoticias() {
-        fetch(rssApiUrl)
+        fetch(proxyUrl)
             .then(response => {
-                if (!response.ok) throw new Error('Error de conexión con Google News');
-                return response.json();
+                if (!response.ok) throw new Error('Bloqueo de seguridad o error de red');
+                return response.text();
             })
-            .then(data => {
-                if (data.status === 'ok' && data.items.length > 0) {
-                    let titulos = [];
-                    data.items.forEach(item => {
-                        // Limpiamos el texto porque Google a veces le agrega " - Imagen Zacatecas" al final del título
-                        let tituloLimpio = item.title.replace(' - Imagen Zacatecas', '').trim();
-                        titulos.push(tituloLimpio);
-                    });
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Tu selector CSS original, apuntando exactamente a donde quieres
+                const elementos = doc.querySelectorAll('h2.ee-post__title__heading');
+                
+                let titulos = [];
+                elementos.forEach(el => {
+                    const texto = el.textContent.trim();
+                    if(texto !== '') {
+                        titulos.push(texto);
+                    }
+                });
+
+                if (titulos.length > 0) {
+                    const separador = " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                    const textoFinal = titulos.join(separador) + separador;
                     
-                    const separador = " &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ";
-                    document.getElementById('noticias').innerHTML = titulos.join(separador) + separador;
+                    // Llenamos ambos contenedores
+                    document.getElementById('noticias').innerHTML = textoFinal;
+                    document.getElementById('noticias2').innerHTML = textoFinal;
                 } else {
-                    document.getElementById('noticias').innerHTML = "Esperando titulares recientes...";
+                    document.getElementById('noticias').innerHTML = "No se encontraron los títulos en la página.";
+                    document.getElementById('noticias2').innerHTML = "No se encontraron los títulos en la página.";
                 }
             })
             .catch(error => {
-                document.getElementById('noticias').innerHTML = "Reconectando sistema de noticias... ";
                 console.error(error);
+                document.getElementById('noticias').innerHTML = "Reconectando con la página web...";
+                document.getElementById('noticias2').innerHTML = "Reconectando con la página web...";
             });
     }
 
-    // Carga inicial y actualización automática cada 5 minutos
+    // Ejecuta la función al abrir y la repite cada 5 minutos (300000 ms)
     cargarNoticias();
     setInterval(cargarNoticias, 300000);
 </script>
