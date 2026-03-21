@@ -43,27 +43,26 @@
 
 <script>
     const urlNoticias = 'https://imagenzac.com.mx/ultima-hora';
-    // Cambiamos a un proxy distinto, menos detectado por los firewalls
     const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${urlNoticias}`;
 
     function cargarNoticias() {
         fetch(proxyUrl)
             .then(response => {
-                if (!response.ok) throw new Error('Bloqueo de red');
+                if (!response.ok) throw new Error('Fallo en la conexión del proxy');
                 return response.text();
             })
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 
-                // Selector más flexible (quitamos el h2 inicial) por si el cortafuegos alteró un poco el HTML
-                const elementos = doc.querySelectorAll('.ee-post__title__heading, .ee-post__title');
+                // Selector "todoterreno": Busca títulos dentro de los artículos sin importar la clase exacta
+                const elementos = doc.querySelectorAll('article h2, article h3, .ee-post__title__heading');
                 
                 let titulos = [];
                 elementos.forEach(el => {
                     const texto = el.textContent.trim();
-                    // Evitamos títulos vacíos o noticias duplicadas
-                    if(texto !== '' && !titulos.includes(texto)) {
+                    // Filtramos texto vacío y evitamos que se cuelen menús u otros textos cortos
+                    if(texto.length > 15 && !titulos.includes(texto)) {
                         titulos.push(texto);
                     }
                 });
@@ -75,17 +74,14 @@
                     document.getElementById('noticias').innerHTML = textoFinal;
                     document.getElementById('noticias2').innerHTML = textoFinal;
                 } else {
-                    // "El chivato": Si vuelve a fallar, imprimimos el título de la página de error
-                    const tituloPagina = doc.title || "Página sin título";
-                    const errorMsg = "Bloqueo de seguridad activo. El servidor web respondió con: " + tituloPagina + " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-                    document.getElementById('noticias').innerHTML = errorMsg;
-                    document.getElementById('noticias2').innerHTML = errorMsg;
+                    document.getElementById('noticias').innerHTML = "No se encontraron los títulos con la nueva regla CSS.";
+                    document.getElementById('noticias2').innerHTML = "No se encontraron los títulos con la nueva regla CSS.";
                 }
             })
             .catch(error => {
                 console.error(error);
-                document.getElementById('noticias').innerHTML = "Reconectando proxy alternativo... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-                document.getElementById('noticias2').innerHTML = "Reconectando proxy alternativo... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                document.getElementById('noticias').innerHTML = "Intentando reconectar... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                document.getElementById('noticias2').innerHTML = "Intentando reconectar... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
             });
     }
 
