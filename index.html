@@ -36,43 +36,32 @@
 <body>
 
 <div class="ticker-wrap">
-    <div class="ticker" id="noticias">Cargando conexión...</div>
+    <div class="ticker" id="noticias">Conectando con el servidor de noticias...</div>
 </div>
 
 <script>
-    const urlNoticias = 'https://imagenzac.com.mx/ultima-hora';
-    // Usamos la versión 'raw' del proxy para obtener el HTML directo
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlNoticias)}`;
+    // Apuntamos directamente al Feed RSS de Imagen Zacatecas convertido a JSON
+    const rssApiUrl = 'https://api.rss2json.com/v1/api.json?rss_url=https://imagenzac.com.mx/feed/';
 
     function cargarNoticias() {
-        fetch(proxyUrl)
+        fetch(rssApiUrl)
             .then(response => {
-                if (!response.ok) throw new Error('El servidor rechazó la conexión');
-                return response.text(); // Extraemos el HTML crudo
+                if (!response.ok) throw new Error('Error en el servidor de RSS');
+                return response.json();
             })
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Buscamos los títulos usando tu selector
-                const elementos = doc.querySelectorAll('h2.ee-post__title__heading');
-                
-                let titulos = [];
-                elementos.forEach(el => {
-                    if(el.textContent.trim() !== '') {
-                        titulos.push(el.textContent.trim());
-                    }
-                });
-
-                if (titulos.length > 0) {
+            .then(data => {
+                if (data.status === 'ok' && data.items.length > 0) {
+                    // Extraemos solo los títulos de las noticias
+                    let titulos = data.items.map(item => item.title);
+                    
                     const separador = " &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ";
                     document.getElementById('noticias').innerHTML = titulos.join(separador) + separador;
                 } else {
-                    document.getElementById('noticias').innerHTML = "Error: No se encontraron los títulos (Quizá cambió el diseño de la web).";
+                    document.getElementById('noticias').innerHTML = "No se encontraron noticias en el Feed en este momento.";
                 }
             })
             .catch(error => {
-                document.getElementById('noticias').innerHTML = "Fallo de red: " + error.message;
+                document.getElementById('noticias').innerHTML = "Fallo de actualización: " + error.message;
             });
     }
 
