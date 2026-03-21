@@ -43,25 +43,27 @@
 
 <script>
     const urlNoticias = 'https://imagenzac.com.mx/ultima-hora';
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(urlNoticias)}`;
+    // Cambiamos a un proxy distinto, menos detectado por los firewalls
+    const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${urlNoticias}`;
 
     function cargarNoticias() {
         fetch(proxyUrl)
             .then(response => {
-                if (!response.ok) throw new Error('Bloqueo de seguridad o error de red');
+                if (!response.ok) throw new Error('Bloqueo de red');
                 return response.text();
             })
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 
-                // Tu selector CSS original, apuntando exactamente a donde quieres
-                const elementos = doc.querySelectorAll('h2.ee-post__title__heading');
+                // Selector más flexible (quitamos el h2 inicial) por si el cortafuegos alteró un poco el HTML
+                const elementos = doc.querySelectorAll('.ee-post__title__heading, .ee-post__title');
                 
                 let titulos = [];
                 elementos.forEach(el => {
                     const texto = el.textContent.trim();
-                    if(texto !== '') {
+                    // Evitamos títulos vacíos o noticias duplicadas
+                    if(texto !== '' && !titulos.includes(texto)) {
                         titulos.push(texto);
                     }
                 });
@@ -70,22 +72,23 @@
                     const separador = " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
                     const textoFinal = titulos.join(separador) + separador;
                     
-                    // Llenamos ambos contenedores
                     document.getElementById('noticias').innerHTML = textoFinal;
                     document.getElementById('noticias2').innerHTML = textoFinal;
                 } else {
-                    document.getElementById('noticias').innerHTML = "No se encontraron los títulos en la página.";
-                    document.getElementById('noticias2').innerHTML = "No se encontraron los títulos en la página.";
+                    // "El chivato": Si vuelve a fallar, imprimimos el título de la página de error
+                    const tituloPagina = doc.title || "Página sin título";
+                    const errorMsg = "Bloqueo de seguridad activo. El servidor web respondió con: " + tituloPagina + " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                    document.getElementById('noticias').innerHTML = errorMsg;
+                    document.getElementById('noticias2').innerHTML = errorMsg;
                 }
             })
             .catch(error => {
                 console.error(error);
-                document.getElementById('noticias').innerHTML = "Reconectando con la página web...";
-                document.getElementById('noticias2').innerHTML = "Reconectando con la página web...";
+                document.getElementById('noticias').innerHTML = "Reconectando proxy alternativo... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                document.getElementById('noticias2').innerHTML = "Reconectando proxy alternativo... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
             });
     }
 
-    // Ejecuta la función al abrir y la repite cada 5 minutos (300000 ms)
     cargarNoticias();
     setInterval(cargarNoticias, 300000);
 </script>
