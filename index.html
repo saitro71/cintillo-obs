@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cintillo de Noticias - Proxy Privado</title>
+    <title>Cintillo de Noticias - WP API</title>
     <style>
         body {
             margin: 0;
@@ -37,55 +37,53 @@
 <body>
 
 <div class="ticker-wrap">
-    <div class="ticker" id="noticias">Conectando con el servidor seguro...</div>
-    <div class="ticker" id="noticias2">Conectando con el servidor seguro...</div>
+    <div class="ticker" id="noticias">Extrayendo datos directos...</div>
+    <div class="ticker" id="noticias2">Extrayendo datos directos...</div>
 </div>
 
 <script>
-    // Tu enlace privado de Google Apps Script
-    const googleProxyUrl = 'https://script.google.com/macros/s/AKfycbzJ9mtB8xuxyZDnNJfmwNCp77uso5_GlYoaS8Ux3n1g97RgcVyad4-ks4-Q87sFY4y0/exec';
+    // PEGA AQUÍ TU NUEVO ENLACE DE GOOGLE SCRIPT (Asegúrate de que sea el nuevo de la "Nueva Implementación")
+    const googleProxyUrl = 'https://script.google.com/macros/s/TU_NUEVA_URL_AQUI/exec';
 
     function cargarNoticias() {
         fetch(googleProxyUrl)
             .then(response => {
-                if (!response.ok) throw new Error('Error al conectar con Google Script');
-                return response.text();
+                if (!response.ok) throw new Error('Error al conectar con la API de Google');
+                return response.json(); // Ahora leemos datos puros, no HTML
             })
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Usamos tu selector original que lee la página en el orden cronológico exacto
-                const elementos = doc.querySelectorAll('h2.ee-post__title__heading');
-                
-                let titulos = [];
-                elementos.forEach(el => {
-                    const texto = el.textContent.trim();
-                    if(texto !== '' && !titulos.includes(texto)) {
-                        titulos.push(texto);
-                    }
-                });
+            .then(posts => {
+                // Verificamos que la API sí nos haya devuelto un arreglo de noticias
+                if (Array.isArray(posts) && posts.length > 0) {
+                    let titulos = [];
+                    
+                    posts.forEach(post => {
+                        // Limpiamos los caracteres especiales (como acentos o comillas que WP manda codificados)
+                        let doc = new DOMParser().parseFromString(post.title.rendered, "text/html");
+                        let tituloLimpio = doc.documentElement.textContent;
+                        
+                        // Opcional: quitamos "El Runrún:" si aparece
+                        tituloLimpio = tituloLimpio.replace(/^El [Rr]unr[úu]n:\s*/i, '');
+                        
+                        titulos.push(tituloLimpio.trim());
+                    });
 
-                if (titulos.length > 0) {
                     const separador = " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
                     const textoFinal = titulos.join(separador) + separador;
                     
                     document.getElementById('noticias').innerHTML = textoFinal;
                     document.getElementById('noticias2').innerHTML = textoFinal;
                 } else {
-                    // Si el HTML viene vacío, indicará este error
-                    document.getElementById('noticias').innerHTML = "No se encontraron los títulos en el código fuente. &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-                    document.getElementById('noticias2').innerHTML = "No se encontraron los títulos en el código fuente. &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                    document.getElementById('noticias').innerHTML = "La base de datos devolvió un registro vacío. &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                    document.getElementById('noticias2').innerHTML = "La base de datos devolvió un registro vacío. &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('noticias').innerHTML = "Sincronizando conexión... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-                document.getElementById('noticias2').innerHTML = "Sincronizando conexión... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                console.error('Error de red:', error);
+                document.getElementById('noticias').innerHTML = "Sincronizando con base de datos... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                document.getElementById('noticias2').innerHTML = "Sincronizando con base de datos... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
             });
     }
 
-    // Ejecuta al cargar y se actualiza en segundo plano cada 5 minutos
     cargarNoticias();
     setInterval(cargarNoticias, 300000);
 </script>
