@@ -1,189 +1,87 @@
 <!DOCTYPE html>
-
 <html lang="es">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <title>Cintillo de Noticias - Conexión Directa</title>
-
+    <title>Cintillo de Noticias</title>
     <style>
-
         body {
-
             margin: 0;
-
             padding: 0;
-
             background-color: transparent;
-
             color: white;
-
             font-family: Arial, sans-serif;
-
             font-size: 28px;
-
             font-weight: bold;
-
             overflow: hidden;
-
         }
-
         .ticker-wrap {
-
             width: 100%;
-
             background-color: rgba(0, 0, 0, 0.7);
-
             padding: 10px 0;
-
             box-sizing: border-box;
-
             display: flex;
-
             white-space: nowrap;
-
             overflow: hidden;
-
         }
-
         .ticker {
-
             flex-shrink: 0;
-
             padding-right: 50px;
-
+            /* Aquí controlas la velocidad. Si lo quieres más lento, sube de 100s a 150s */
             animation: ticker 100s linear infinite;
-
         }
-
         @keyframes ticker {
-
             0% { transform: translateX(0); }
-
             100% { transform: translateX(-100%); }
-
         }
-
     </style>
-
 </head>
-
 <body>
 
-
-
 <div class="ticker-wrap">
-
-    <div class="ticker" id="noticias">Conectando con Imagen Zacatecas...</div>
-
-    <div class="ticker" id="noticias2">Conectando con Imagen Zacatecas...</div>
-
+    <div class="ticker" id="noticias">Cargando noticias...</div>
+    <div class="ticker" id="noticias2">Cargando noticias...</div>
 </div>
 
-
-
 <script>
-
-    // ¡Al fin! URL directa sin proxies gracias a la autorización del equipo web
-
-    const urlNoticias = 'https://imagenzac.com.mx/ultima-hora';
-
-
+    // Tu enlace de Google News convertido a formato RSS agregando "/rss/"
+    const googleNewsRss = 'https://news.google.com/rss/publications/CAAqLAgKIiZDQklTRmdnTWFoSUtFR2x0WVdkbGJucGhZeTVqYjIwdWJYZ29BQVAB?hl=es-419&gl=MX&ceid=MX:es-419';
+    const rssApiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleNewsRss)}`;
 
     function cargarNoticias() {
-
-        // Hacemos la petición directa. Como Cloudflare ya nos conoce, nos dejará pasar.
-
-        fetch(urlNoticias)
-
+        fetch(rssApiUrl)
             .then(response => {
-
-                if (!response.ok) throw new Error('Error al conectar con la página');
-
-                return response.text();
-
+                if (!response.ok) throw new Error('Error en la red');
+                return response.json();
             })
-
-            .then(html => {
-
-                const parser = new DOMParser();
-
-                const doc = parser.parseFromString(html, 'text/html');
-
-                
-
-                // Usamos TU selector CSS original exacto
-
-                const elementos = doc.querySelectorAll('h2.ee-post__title__heading');
-
-                
-
-                let titulos = [];
-
-                elementos.forEach(el => {
-
-                    const texto = el.textContent.trim();
-
-                    // Filtramos para asegurar que no haya repetidos ni vacíos
-
-                    if(texto !== '' && !titulos.includes(texto)) {
-
-                        titulos.push(texto);
-
-                    }
-
-                });
-
-
-
-                if (titulos.length > 0) {
-
-                    const separador = " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-
-                    const textoFinal = titulos.join(separador) + separador;
-
+            .then(data => {
+                if (data.status === 'ok' && data.items.length > 0) {
+                    let titulos = [];
+                    data.items.forEach(item => {
+                        let titulo = item.title;
+                        
+                        // Filtro 1: Quitamos la firma del periódico que pone Google
+                        titulo = titulo.replace(' - Imagen Zacatecas', '');
+                        
+                        // Filtro 2: Limpiamos la etiqueta de "El Runrún" si aparece
+                        titulo = titulo.replace(/^El [Rr]unr[úu]n:\s*/i, '');
+                        
+                        titulos.push(titulo.trim());
+                    });
                     
-
+                    const separador = " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                    const textoFinal = titulos.join(separador) + separador;
+                    
+                    // Inyectamos el texto en los dos contenedores
                     document.getElementById('noticias').innerHTML = textoFinal;
-
                     document.getElementById('noticias2').innerHTML = textoFinal;
-
-                } else {
-
-                    document.getElementById('noticias').innerHTML = "Cargando titulares... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-
-                    document.getElementById('noticias2').innerHTML = "Cargando titulares... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-
                 }
-
             })
-
-            .catch(error => {
-
-                console.error('Error de red:', error);
-
-                document.getElementById('noticias').innerHTML = "Actualizando conexión... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-
-                document.getElementById('noticias2').innerHTML = "Actualizando conexión... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-
-            });
-
+            .catch(error => console.error('Error al cargar noticias:', error));
     }
 
-
-
-    // Ejecuta al cargar y luego cada 5 minutos
-
     cargarNoticias();
-
     setInterval(cargarNoticias, 300000);
-
 </script>
 
-
-
 </body>
-
 </html>
