@@ -1,87 +1,46 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Cintillo de Noticias</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: transparent;
-            color: white;
-            font-family: Arial, sans-serif;
-            font-size: 28px;
-            font-weight: bold;
-            overflow: hidden;
-        }
-        .ticker-wrap {
-            width: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 10px 0;
-            box-sizing: border-box;
-            display: flex;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-        .ticker {
-            flex-shrink: 0;
-            padding-right: 50px;
-            /* Aquí controlas la velocidad. Si lo quieres más lento, sube de 100s a 150s */
-            animation: ticker 100s linear infinite;
-        }
-        @keyframes ticker {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-100%); }
-        }
-    </style>
-</head>
-<body>
-
-<div class="ticker-wrap">
-    <div class="ticker" id="noticias">Cargando noticias...</div>
-    <div class="ticker" id="noticias2">Cargando noticias...</div>
-</div>
-
 <script>
-    // Tu enlace de Google News convertido a formato RSS agregando "/rss/"
-    const googleNewsRss = 'https://news.google.com/rss/publications/CAAqLAgKIiZDQklTRmdnTWFoSUtFR2x0WVdkbGJucGhZeTVqYjIwdWJYZ29BQVAB?hl=es-419&gl=MX&ceid=MX:es-419';
-    const rssApiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(googleNewsRss)}`;
+    // PEGA AQUÍ LA URL QUE TE DIO GOOGLE APPS SCRIPT
+    const googleProxyUrl = 'https://script.google.com/macros/s/TU_URL_AQUI/exec';
 
     function cargarNoticias() {
-        fetch(rssApiUrl)
+        fetch(googleProxyUrl)
             .then(response => {
-                if (!response.ok) throw new Error('Error en la red');
-                return response.json();
+                if (!response.ok) throw new Error('Error al conectar con Google Script');
+                return response.text();
             })
-            .then(data => {
-                if (data.status === 'ok' && data.items.length > 0) {
-                    let titulos = [];
-                    data.items.forEach(item => {
-                        let titulo = item.title;
-                        
-                        // Filtro 1: Quitamos la firma del periódico que pone Google
-                        titulo = titulo.replace(' - Imagen Zacatecas', '');
-                        
-                        // Filtro 2: Limpiamos la etiqueta de "El Runrún" si aparece
-                        titulo = titulo.replace(/^El [Rr]unr[úu]n:\s*/i, '');
-                        
-                        titulos.push(titulo.trim());
-                    });
-                    
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Usamos tu selector original que lee la página en el orden cronológico exacto
+                const elementos = doc.querySelectorAll('h2.ee-post__title__heading');
+                
+                let titulos = [];
+                elementos.forEach(el => {
+                    const texto = el.textContent.trim();
+                    if(texto !== '' && !titulos.includes(texto)) {
+                        titulos.push(texto);
+                    }
+                });
+
+                if (titulos.length > 0) {
                     const separador = " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
                     const textoFinal = titulos.join(separador) + separador;
                     
-                    // Inyectamos el texto en los dos contenedores
                     document.getElementById('noticias').innerHTML = textoFinal;
                     document.getElementById('noticias2').innerHTML = textoFinal;
+                } else {
+                    document.getElementById('noticias').innerHTML = "No se encontraron los títulos en el HTML.";
+                    document.getElementById('noticias2').innerHTML = "No se encontraron los títulos en el HTML.";
                 }
             })
-            .catch(error => console.error('Error al cargar noticias:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('noticias').innerHTML = "Sincronizando conexión segura... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                document.getElementById('noticias2').innerHTML = "Sincronizando conexión segura... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+            });
     }
 
     cargarNoticias();
     setInterval(cargarNoticias, 300000);
 </script>
-
-</body>
-</html>
