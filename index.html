@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cintillo de Noticias - WP API</title>
+    <title>Cintillo de Noticias - Conexión Directa</title>
     <style>
         body {
             margin: 0;
@@ -37,54 +37,53 @@
 <body>
 
 <div class="ticker-wrap">
-    <div class="ticker" id="noticias">Extrayendo datos directos...</div>
-    <div class="ticker" id="noticias2">Extrayendo datos directos...</div>
+    <div class="ticker" id="noticias">Conectando con Imagen Zacatecas...</div>
+    <div class="ticker" id="noticias2">Conectando con Imagen Zacatecas...</div>
 </div>
 
 <script>
-    // Tu puente de datos directo a la API de WordPress
-    const googleProxyUrl = 'https://script.google.com/macros/s/AKfycbx_IURiiR_AkQZ7XuayLi25u35lNjLXxQ1qyjwYcCxviZfupL4pQ022EwiYYUctHbf0/exec';
+    // URL directa esperando la autorización CORS del equipo web
+    const urlNoticias = 'https://imagenzac.com.mx/ultima-hora';
 
     function cargarNoticias() {
-        fetch(googleProxyUrl)
+        fetch(urlNoticias)
             .then(response => {
-                if (!response.ok) throw new Error('Error al conectar con la API de Google');
-                return response.json(); // Leemos la matriz de datos puros
+                if (!response.ok) throw new Error('Error al conectar con la página');
+                return response.text();
             })
-            .then(posts => {
-                // Verificamos que la API sí nos haya devuelto el arreglo de noticias
-                if (Array.isArray(posts) && posts.length > 0) {
-                    let titulos = [];
-                    
-                    posts.forEach(post => {
-                        // Limpiamos los caracteres especiales del JSON
-                        let doc = new DOMParser().parseFromString(post.title.rendered, "text/html");
-                        let tituloLimpio = doc.documentElement.textContent;
-                        
-                        // Quitamos "El Runrún:" para que la pantalla se vea limpia
-                        tituloLimpio = tituloLimpio.replace(/^El [Rr]unr[úu]n:\s*/i, '');
-                        
-                        titulos.push(tituloLimpio.trim());
-                    });
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Tu selector CSS original exacto
+                const elementos = doc.querySelectorAll('h2.ee-post__title__heading');
+                
+                let titulos = [];
+                elementos.forEach(el => {
+                    const texto = el.textContent.trim();
+                    if(texto !== '' && !titulos.includes(texto)) {
+                        titulos.push(texto);
+                    }
+                });
 
+                if (titulos.length > 0) {
                     const separador = " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
                     const textoFinal = titulos.join(separador) + separador;
                     
                     document.getElementById('noticias').innerHTML = textoFinal;
                     document.getElementById('noticias2').innerHTML = textoFinal;
                 } else {
-                    document.getElementById('noticias').innerHTML = "La base de datos devolvió un registro vacío. &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-                    document.getElementById('noticias2').innerHTML = "La base de datos devolvió un registro vacío. &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                    document.getElementById('noticias').innerHTML = "Cargando titulares... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                    document.getElementById('noticias2').innerHTML = "Cargando titulares... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
                 }
             })
             .catch(error => {
-                console.error('Error de red:', error);
-                document.getElementById('noticias').innerHTML = "Sincronizando con base de datos... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-                document.getElementById('noticias2').innerHTML = "Sincronizando con base de datos... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                console.error('Error de red o bloqueo CORS activo:', error);
+                document.getElementById('noticias').innerHTML = "Esperando autorización del servidor... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
+                document.getElementById('noticias2').innerHTML = "Esperando autorización del servidor... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
             });
     }
 
-    // Ejecuta al iniciar y refresca cada 5 minutos
     cargarNoticias();
     setInterval(cargarNoticias, 300000);
 </script>
