@@ -2,60 +2,75 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cintillo de Noticias - RSS Oficial</title>
+    <title>Cintillo de Noticias - Fondo Blanco</title>
     <style>
-        body { margin: 0; padding: 0; background-color: transparent; color: white; font-family: Arial, sans-serif; font-size: 28px; font-weight: bold; overflow: hidden; }
-        .ticker-wrap { width: 100%; background-color: rgba(0, 0, 0, 0.7); padding: 10px 0; box-sizing: border-box; display: flex; white-space: nowrap; overflow: hidden; }
-        .ticker { flex-shrink: 0; padding-right: 50px; animation: ticker 120s linear infinite; }
-        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent; /* Mantenemos el fondo del documento transparente para OBS */
+            color: #1a1a1a; /* Texto en negro casi puro para máxima legibilidad */
+            font-family: Arial, sans-serif;
+            font-size: 28px;
+            font-weight: bold;
+            overflow: hidden;
+        }
+        .ticker-wrap {
+            width: 100%;
+            background-color: white; /* <--- AQUÍ CAMBIAMOS EL FONDO A BLANCO */
+            padding: 10px 0;
+            box-sizing: border-box;
+            display: flex;
+            white-space: nowrap;
+            overflow: hidden;
+            /* Añadí una pequeña sombra interna para que se vea más profesional */
+            box-shadow: inset 0 -2px 5px rgba(0,0,0,0.1);
+            border-top: 1px solid #ddd;
+        }
+        .ticker {
+            flex-shrink: 0;
+            padding-right: 50px;
+            animation: ticker 120s linear infinite;
+        }
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
     </style>
 </head>
 <body>
 
 <div class="ticker-wrap">
-    <div class="ticker" id="noticias">Sincronizando con el servidor de noticias...</div>
-    <div class="ticker" id="noticias2">Sincronizando con el servidor de noticias...</div>
+    <div class="ticker" id="noticias">Sincronizando...</div>
+    <div class="ticker" id="noticias2">Sincronizando...</div>
 </div>
 
 <script>
-    // Usamos el conversor para saltarnos el bloqueo CORS si aún no lo habilitan
+    // Tu link oficial que nos funcionó perfecto
     const urlRSSOficial = 'https://imagenzac.com.mx/rss-ultimas-noticias.xml';
     const rssApiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(urlRSSOficial)}`;
 
     function cargarNoticias() {
         fetch(rssApiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red');
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data.status === 'ok' && data.items.length > 0) {
                     let titulos = [];
                     data.items.forEach(item => {
                         let titulo = item.title;
-                        
-                        // Limpieza de etiquetas comunes
                         titulo = titulo.replace(/^El [Rr]unr[úu]n:\s*/i, '');
-                        
                         titulos.push(titulo.trim());
                     });
-                    
                     const separador = " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
                     const textoFinal = titulos.join(separador) + separador;
-                    
                     document.getElementById('noticias').innerHTML = textoFinal;
                     document.getElementById('noticias2').innerHTML = textoFinal;
                 }
             })
-            .catch(error => {
-                console.error('Error al cargar noticias:', error);
-                document.getElementById('noticias').innerHTML = "Actualizando titulares... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-                document.getElementById('noticias2').innerHTML = "Actualizando titulares... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
-            });
+            .catch(error => console.error('Error:', error));
     }
 
     cargarNoticias();
-    setInterval(cargarNoticias, 300000); // Se actualiza cada 5 minutos
+    setInterval(cargarNoticias, 300000);
 </script>
 </body>
 </html>
