@@ -46,12 +46,25 @@
 </div>
 
 <script>
+    // 1. RECUPERACIÓN INSTANTÁNEA (El Anti-Parpadeo)
+    // Al cargar la página (después de un Hard Reset de OBS), leemos el "disco duro" interno
+    const noticiasGuardadas = localStorage.getItem('backup_cintillo');
+    
+    if (noticiasGuardadas) {
+        // Si ya había noticias guardadas de la sesión anterior, las pintamos inmediatamente.
+        // ¡Nadie verá nunca el mensaje de "Sincronizando"!
+        document.getElementById('noticias').innerHTML = noticiasGuardadas;
+        document.getElementById('noticias2').innerHTML = noticiasGuardadas;
+    } else {
+        // Esto solo se verá la primera vez en la historia que abras el archivo
+        document.getElementById('noticias').innerHTML = "CARGANDO NOTICIAS... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp;";
+        document.getElementById('noticias2').innerHTML = "CARGANDO NOTICIAS... &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp;";
+    }
+
+    // 2. LA FUNCIÓN DE DESCARGA
     function cargarNoticias() {
-        // El "Rompedor de Caché" para asegurar que leemos datos frescos del servidor
         const timestamp = new Date().getTime();
         const urlRSSOficial = 'https://imagenzac.com.mx/rss-ultimas-noticias.xml?nocache=' + timestamp;
-        
-        // Conversor a JSON
         const rssApiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(urlRSSOficial)}`;
 
         fetch(rssApiUrl)
@@ -60,30 +73,28 @@
                 if (data.status === 'ok' && data.items.length > 0) {
                     let titulos = [];
                     data.items.forEach(item => {
-                        let titulo = item.title;
-                        // Limpiamos la etiqueta del Runrún
-                        titulo = titulo.replace(/^El [Rr]unr[úu]n:\s*/i, '');
+                        let titulo = item.title.replace(/^El [Rr]unr[úu]n:\s*/i, '');
                         titulos.push(titulo.trim());
                     });
                     
                     const separador = " &nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp; ";
                     const textoFinal = titulos.join(separador) + separador;
                     
-                    document.getElementById('noticias').innerHTML = textoFinal;
-                    document.getElementById('noticias2').innerHTML = textoFinal;
-                    
-                    // Registro técnico en consola
-                    console.log("Cintillo actualizado correctamente: " + new Date().toLocaleTimeString());
+                    // Comparamos: Si hubo notas nuevas, actualizamos la pantalla y guardamos en la bóveda
+                    if (textoFinal !== noticiasGuardadas) {
+                        document.getElementById('noticias').innerHTML = textoFinal;
+                        document.getElementById('noticias2').innerHTML = textoFinal;
+                        
+                        // Guardamos el nuevo texto en el almacenamiento permanente de OBS
+                        localStorage.setItem('backup_cintillo', textoFinal); 
+                    }
                 }
             })
-            .catch(error => console.error('Error al cargar noticias:', error));
+            .catch(error => console.error('Error al actualizar:', error));
     }
 
-    // Ejecución inicial al abrir OBS
+    // 3. Ejecutamos la búsqueda silenciosa en segundo plano
     cargarNoticias();
-    
-    // Intervalo de actualización optimizado a 30 minutos (1,800,000 milisegundos)
-    setInterval(cargarNoticias, 1800000);
 </script>
 </body>
 </html>
